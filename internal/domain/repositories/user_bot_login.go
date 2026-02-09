@@ -3,25 +3,25 @@ package repositories
 import (
 	"context"
 
-	domain "github.com/ulbwa/telegram-oidc-provider/internal/domain/entities"
+	"github.com/ulbwa/telegram-oidc-provider/internal/domain/entities"
 )
 
 type UserBotLoginRepository interface {
 	Create(
 		ctx context.Context,
-		login *domain.UserBotLogin,
+		login *entities.UserBotLogin,
 	) error
 
 	Read(
 		ctx context.Context,
 		userId,
 		botId int64,
-		login *domain.UserBotLogin,
+		login *entities.UserBotLogin,
 	) error
 
 	Update(
 		ctx context.Context,
-		login *domain.UserBotLogin,
+		login *entities.UserBotLogin,
 	) error
 
 	Delete(
@@ -34,6 +34,6 @@ type UserBotLoginRepository interface {
 		ctx context.Context,
 		botId int64,
 		page *string,
-		logins *[]domain.UserBotLogin,
+		logins *[]entities.UserBotLogin,
 	) error
 }

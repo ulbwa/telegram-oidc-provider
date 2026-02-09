@@ -30,7 +30,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	}
 
 	model := r.domainToModel(user)
-	
+
 	tx := GetTx(ctx, r.db)
 	if err := tx.WithContext(ctx).Create(&model).Error; err != nil {
 		return mapError(err, "failed to create user")
@@ -40,7 +40,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	if err := r.modelToDomain(&model, user); err != nil {
 		return fmt.Errorf("%w: failed to convert model to domain: %v", repositories.ErrOperationFailed, err)
 	}
-	
+
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (r *userRepository) Read(ctx context.Context, id int64, user *domain.User) 
 
 	var model UserModel
 	tx := GetTx(ctx, r.db)
-	
+
 	if err := tx.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		return mapError(err, fmt.Sprintf("failed to read user with id %d", id))
 	}
@@ -95,16 +95,16 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 // Delete deletes a user from the database
 func (r *userRepository) Delete(ctx context.Context, id int64) error {
 	tx := GetTx(ctx, r.db)
-	
+
 	result := tx.WithContext(ctx).Where("id = ?", id).Delete(&UserModel{})
 	if result.Error != nil {
 		return mapError(result.Error, fmt.Sprintf("failed to delete user with id %d", id))
 	}
-	
+
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("%w: user with id %d not found for deletion", repositories.ErrNotFound, id)
 	}
-	
+
 	return nil
 }
 

@@ -7,7 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
-	domain "github.com/ulbwa/telegram-oidc-provider/internal/domain/entities"
+	"github.com/ulbwa/telegram-oidc-provider/internal/domain/entities"
 	"github.com/ulbwa/telegram-oidc-provider/internal/domain/repositories"
 )
 
@@ -24,7 +24,7 @@ func NewBotRepository(db *gorm.DB) repositories.BotRepository {
 }
 
 // Create creates a new bot in the database
-func (r *botRepository) Create(ctx context.Context, bot *domain.Bot) error {
+func (r *botRepository) Create(ctx context.Context, bot *entities.Bot) error {
 	if bot == nil {
 		return fmt.Errorf("%w: bot cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -43,7 +43,7 @@ func (r *botRepository) Create(ctx context.Context, bot *domain.Bot) error {
 }
 
 // Read retrieves a bot by its ID
-func (r *botRepository) Read(ctx context.Context, id int64, bot *domain.Bot) error {
+func (r *botRepository) Read(ctx context.Context, id int64, bot *entities.Bot) error {
 	if bot == nil {
 		return fmt.Errorf("%w: bot cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -60,7 +60,7 @@ func (r *botRepository) Read(ctx context.Context, id int64, bot *domain.Bot) err
 }
 
 // ReadByClientId retrieves a bot by its client ID
-func (r *botRepository) ReadByClientId(ctx context.Context, clientId string, bot *domain.Bot) error {
+func (r *botRepository) ReadByClientId(ctx context.Context, clientId string, bot *entities.Bot) error {
 	if bot == nil {
 		return fmt.Errorf("%w: bot cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -77,7 +77,7 @@ func (r *botRepository) ReadByClientId(ctx context.Context, clientId string, bot
 }
 
 // Update updates an existing bot in the database
-func (r *botRepository) Update(ctx context.Context, bot *domain.Bot) error {
+func (r *botRepository) Update(ctx context.Context, bot *entities.Bot) error {
 	if bot == nil {
 		return fmt.Errorf("%w: bot cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -120,7 +120,7 @@ func (r *botRepository) Delete(ctx context.Context, id int64) error {
 }
 
 // domainToModel converts a domain Bot entity to a BotModel
-func (r *botRepository) domainToModel(bot *domain.Bot) BotModel {
+func (r *botRepository) domainToModel(bot *entities.Bot) BotModel {
 	model := BotModel{
 		Id:        bot.Id,
 		Name:      bot.Name,
@@ -141,7 +141,7 @@ func (r *botRepository) domainToModel(bot *domain.Bot) BotModel {
 }
 
 // modelToDomain converts a BotModel to a domain Bot entity
-func (r *botRepository) modelToDomain(model *BotModel, bot *domain.Bot) {
+func (r *botRepository) modelToDomain(model *BotModel, bot *entities.Bot) {
 	bot.Id = model.Id
 	bot.Name = model.Name
 	bot.ClientId = model.ClientId

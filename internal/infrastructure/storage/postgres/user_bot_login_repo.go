@@ -7,7 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
-	domain "github.com/ulbwa/telegram-oidc-provider/internal/domain/entities"
+	"github.com/ulbwa/telegram-oidc-provider/internal/domain/entities"
 	"github.com/ulbwa/telegram-oidc-provider/internal/domain/repositories"
 )
 
@@ -24,14 +24,14 @@ func NewUserBotLoginRepository(db *gorm.DB) repositories.UserBotLoginRepository 
 }
 
 // Create creates a new user bot login in the database
-func (r *userBotLoginRepository) Create(ctx context.Context, login *domain.UserBotLogin) error {
+func (r *userBotLoginRepository) Create(ctx context.Context, login *entities.UserBotLogin) error {
 	if login == nil {
 		return fmt.Errorf("%w: login cannot be nil", repositories.ErrInvalidArgument)
 	}
 
 	model := r.domainToModel(login)
 	tx := GetTx(ctx, r.db)
-	
+
 	if err := tx.WithContext(ctx).Create(&model).Error; err != nil {
 		return mapError(err, fmt.Sprintf("failed to create user_bot_login for user %d and bot %d", login.UserId, login.BotId))
 	}
@@ -43,7 +43,7 @@ func (r *userBotLoginRepository) Create(ctx context.Context, login *domain.UserB
 }
 
 // Read retrieves a user bot login by user ID and bot ID
-func (r *userBotLoginRepository) Read(ctx context.Context, userId, botId int64, login *domain.UserBotLogin) error {
+func (r *userBotLoginRepository) Read(ctx context.Context, userId, botId int64, login *entities.UserBotLogin) error {
 	if login == nil {
 		return fmt.Errorf("%w: login cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -60,7 +60,7 @@ func (r *userBotLoginRepository) Read(ctx context.Context, userId, botId int64, 
 }
 
 // Update updates an existing user bot login in the database
-func (r *userBotLoginRepository) Update(ctx context.Context, login *domain.UserBotLogin) error {
+func (r *userBotLoginRepository) Update(ctx context.Context, login *entities.UserBotLogin) error {
 	if login == nil {
 		return fmt.Errorf("%w: login cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -106,7 +106,7 @@ func (r *userBotLoginRepository) Delete(ctx context.Context, userId, botId int64
 }
 
 // ReadByBotId retrieves all user bot logins for a specific bot with pagination
-func (r *userBotLoginRepository) ReadByBotId(ctx context.Context, botId int64, page *string, logins *[]domain.UserBotLogin) error {
+func (r *userBotLoginRepository) ReadByBotId(ctx context.Context, botId int64, page *string, logins *[]entities.UserBotLogin) error {
 	if logins == nil {
 		return fmt.Errorf("%w: logins cannot be nil", repositories.ErrInvalidArgument)
 	}
@@ -130,9 +130,9 @@ func (r *userBotLoginRepository) ReadByBotId(ctx context.Context, botId int64, p
 	}
 
 	// Convert models to domain entities
-	*logins = make([]domain.UserBotLogin, 0, len(models))
+	*logins = make([]entities.UserBotLogin, 0, len(models))
 	for _, model := range models {
-		var login domain.UserBotLogin
+		var login entities.UserBotLogin
 		r.modelToDomain(&model, &login)
 		*logins = append(*logins, login)
 	}
@@ -141,7 +141,7 @@ func (r *userBotLoginRepository) ReadByBotId(ctx context.Context, botId int64, p
 }
 
 // domainToModel converts a domain UserBotLogin entity to a UserBotLoginModel
-func (r *userBotLoginRepository) domainToModel(login *domain.UserBotLogin) UserBotLoginModel {
+func (r *userBotLoginRepository) domainToModel(login *entities.UserBotLogin) UserBotLoginModel {
 	model := UserBotLoginModel{
 		UserId:      login.UserId,
 		BotId:       login.BotId,
@@ -167,7 +167,7 @@ func (r *userBotLoginRepository) domainToModel(login *domain.UserBotLogin) UserB
 }
 
 // modelToDomain converts a UserBotLoginModel to a domain UserBotLogin entity
-func (r *userBotLoginRepository) modelToDomain(model *UserBotLoginModel, login *domain.UserBotLogin) {
+func (r *userBotLoginRepository) modelToDomain(model *UserBotLoginModel, login *entities.UserBotLogin) {
 	login.UserId = model.UserId
 	login.BotId = model.BotId
 	login.IP = model.ToIP()
