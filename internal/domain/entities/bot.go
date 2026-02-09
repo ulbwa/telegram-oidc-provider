@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"strings"
 	"time"
 )
 
@@ -36,10 +35,10 @@ func NewBot(id int64, name string, clientId string, username string, token strin
 
 	return &Bot{
 		Id:        id,
-		Name:      strings.TrimSpace(name),
-		ClientId:  strings.TrimSpace(clientId),
-		Username:  strings.TrimSpace(username),
-		Token:     strings.TrimSpace(token),
+		Name:      name,
+		ClientId:  clientId,
+		Username:  username,
+		Token:     token,
 		CreatedAt: time.Now(),
 	}, nil
 }
@@ -51,17 +50,20 @@ func (b *Bot) ModifiedAt() time.Time {
 	return b.CreatedAt
 }
 
+func (b *Bot) Touch() {
+	now := time.Now()
+	b.UpdatedAt = &now
+}
+
 func (b *Bot) SetName(name string) error {
 	if err := validateBotName(name); err != nil {
 		return err
 	}
-	name = strings.TrimSpace(name)
 	if b.Name == name {
 		return nil
 	}
-	currentTime := time.Now()
 	b.Name = name
-	b.UpdatedAt = &currentTime
+	b.Touch()
 	return nil
 }
 
@@ -69,12 +71,10 @@ func (b *Bot) SetToken(token string) error {
 	if err := validateBotToken(token); err != nil {
 		return err
 	}
-	token = strings.TrimSpace(token)
 	if b.Token == token {
 		return nil
 	}
-	currentTime := time.Now()
 	b.Token = token
-	b.UpdatedAt = &currentTime
+	b.Touch()
 	return nil
 }
