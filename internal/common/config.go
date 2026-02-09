@@ -10,6 +10,7 @@ import (
 type Config struct {
 	HTTPServer HTTPServerConfig `yaml:"http_server"`
 	Database   DatabaseConfig   `yaml:"database"`
+	Hydra      HydraConfig      `yaml:"hydra"`
 	Logger     LoggerConfig     `yaml:"logger"`
 }
 
@@ -21,6 +22,11 @@ type HTTPServerConfig struct {
 // DatabaseConfig represents database configuration.
 type DatabaseConfig struct {
 	DSN string `yaml:"dsn"` // Database connection string
+}
+
+// HydraConfig represents Hydra OAuth2/OIDC server configuration.
+type HydraConfig struct {
+	AdminURL string `yaml:"admin_url"` // Hydra Admin API URL
 }
 
 // LoggerConfig represents logging configuration.
