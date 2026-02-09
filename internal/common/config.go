@@ -9,12 +9,22 @@ import (
 // Config represents the main application configuration.
 type Config struct {
 	HTTPServer HTTPServerConfig `yaml:"http_server"`
+	Database   DatabaseConfig   `yaml:"database"`
 	Logger     LoggerConfig     `yaml:"logger"`
 }
 
 // HTTPServerConfig represents HTTP server configuration.
 type HTTPServerConfig struct {
 	Address string `yaml:"address"`
+}
+
+// DatabaseConfig represents database configuration.
+type DatabaseConfig struct {
+	DSN             string `yaml:"dsn"`                // Database connection string
+	MaxIdleConns    int    `yaml:"max_idle_conns"`     // Maximum number of idle connections
+	MaxOpenConns    int    `yaml:"max_open_conns"`     // Maximum number of open connections
+	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`  // Maximum connection lifetime in seconds
+	ConnMaxIdleTime int    `yaml:"conn_max_idle_time"` // Maximum idle time in seconds
 }
 
 // LoggerConfig represents logging configuration.
