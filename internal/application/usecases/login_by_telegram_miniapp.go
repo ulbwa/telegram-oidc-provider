@@ -27,6 +27,34 @@ type LoginByTelegramMiniApp struct {
 	userFactory app_services.TelegramUserFactory
 }
 
+func NewLoginByTelegramMiniApp(
+	ttl time.Duration,
+
+	userRepo repositories.UserRepository,
+	loginRepo repositories.UserBotLoginRepository,
+	botRepo repositories.BotRepository,
+
+	hydra app_services.HydraLoginManager,
+	transactor app_services.Transactor,
+	parser app_services.TelegramInitDataParser,
+	verifier app_services.TelegramHashVerifier,
+	replayGuard app_services.TelegramReplayGuard,
+	userFactory app_services.TelegramUserFactory,
+) *LoginByTelegramMiniApp {
+	return &LoginByTelegramMiniApp{
+		ttl:         ttl,
+		userRepo:    userRepo,
+		loginRepo:   loginRepo,
+		botRepo:     botRepo,
+		hydra:       hydra,
+		transactor:  transactor,
+		parser:      parser,
+		verifier:    verifier,
+		replayGuard: replayGuard,
+		userFactory: userFactory,
+	}
+}
+
 type LoginByTelegramMiniAppInput struct {
 	UserIp         net.IP
 	UserAgent      *string

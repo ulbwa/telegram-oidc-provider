@@ -15,7 +15,23 @@ type CreateClient struct {
 	botVerifier app_services.TelegramBotVerifier
 	hydraClient app_services.HydraClientManager
 	transactor  app_services.Transactor
-	botRepo     repositories.BotRepository
+
+	botRepo repositories.BotRepository
+}
+
+func NewCreateClient(
+	botVerifier app_services.TelegramBotVerifier,
+	hydraClient app_services.HydraClientManager,
+	transactor app_services.Transactor,
+
+	botRepo repositories.BotRepository,
+) *CreateClient {
+	return &CreateClient{
+		botVerifier: botVerifier,
+		hydraClient: hydraClient,
+		transactor:  transactor,
+		botRepo:     botRepo,
+	}
 }
 
 type CreateClientInput struct {
