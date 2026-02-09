@@ -111,6 +111,13 @@ func provideFiberApp(injector do.Injector) {
 		}
 		clientController.SetupRoutes(privateGroup)
 
+		// Private Login Controller
+		loginController, err := do.Invoke[*private_login.LoginController](i)
+		if err != nil {
+			return nil, err
+		}
+		loginController.SetupRoutes(privateGroup)
+
 		return &fiberApp{App: app}, nil
 	})
 
