@@ -20,11 +20,7 @@ type HTTPServerConfig struct {
 
 // DatabaseConfig represents database configuration.
 type DatabaseConfig struct {
-	DSN             string `yaml:"dsn"`                // Database connection string
-	MaxIdleConns    int    `yaml:"max_idle_conns"`     // Maximum number of idle connections
-	MaxOpenConns    int    `yaml:"max_open_conns"`     // Maximum number of open connections
-	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`  // Maximum connection lifetime in seconds
-	ConnMaxIdleTime int    `yaml:"conn_max_idle_time"` // Maximum idle time in seconds
+	DSN string `yaml:"dsn"` // Database connection string
 }
 
 // LoggerConfig represents logging configuration.

@@ -2,7 +2,6 @@ package di
 
 import (
 	"context"
-	"time"
 
 	gormzerolog "github.com/mpalmer/gorm-zerolog"
 	"github.com/samber/do/v2"
@@ -38,11 +37,6 @@ func provideGorm(injector do.Injector) {
 
 	// Provide wrapped connection with graceful shutdown support
 	do.Provide(injector, func(i do.Injector) (*postgresConnection, error) {
-		cfg, err := do.Invoke[*common.Config](i)
-		if err != nil {
-			return nil, err
-		}
-
 		dialector, err := do.Invoke[gorm.Dialector](i)
 		if err != nil {
 			return nil, err
@@ -54,28 +48,6 @@ func provideGorm(injector do.Injector) {
 		})
 		if err != nil {
 			return nil, err
-		}
-
-		// Configure connection pool
-		sqlDB, err := db.DB()
-		if err != nil {
-			return nil, err
-		}
-
-		if cfg.Database.MaxIdleConns > 0 {
-			sqlDB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-		}
-
-		if cfg.Database.MaxOpenConns > 0 {
-			sqlDB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
-		}
-
-		if cfg.Database.ConnMaxLifetime > 0 {
-			sqlDB.SetConnMaxLifetime(time.Duration(cfg.Database.ConnMaxLifetime) * time.Second)
-		}
-
-		if cfg.Database.ConnMaxIdleTime > 0 {
-			sqlDB.SetConnMaxIdleTime(time.Duration(cfg.Database.ConnMaxIdleTime) * time.Second)
 		}
 
 		return &postgresConnection{db: db}, nil
