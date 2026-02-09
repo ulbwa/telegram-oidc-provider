@@ -12,6 +12,7 @@ func NewContainer(cfg *common.Config) do.Injector {
 	do.ProvideValue(injector, cfg)
 
 	provideZerolog(injector)
+	provideGorm(injector)
 	provideServices(injector)
 	provideRepositories(injector)
 	provideUsecases(injector)
