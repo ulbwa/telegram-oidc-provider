@@ -1,7 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
+@plugin "tailwindcss-animate";
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -46,8 +44,9 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
   
+  /* ИСПРАВЛЕНО: Ссылка на правильную переменную */
   --color-tg-blue: var(--tg-blue);
-  --color-tg-bg: var(--bg-gray-50);
+  --color-tg-bg: var(--tg-bg); 
   --color-tg-text-secondary: var(--tg-text-secondary);
 }
 
@@ -87,6 +86,9 @@
 
   --tg-blue: #0088cc;
   --tg-text-secondary: #707579;
+  
+  /* ДОБАВЛЕНО: Фон для светлой темы (иначе он прозрачный) */
+  --tg-bg: #f9f9f9; 
 }
 
 .dark {

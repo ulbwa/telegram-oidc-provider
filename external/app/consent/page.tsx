@@ -1,24 +1,58 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Hash } from "lucide-react";
+import { ENV } from "@/lib/env";
+import { getOidcProvider } from "@/lib/oidc-config";
+import { User, Hash, Mail } from "lucide-react";
 import Link from "next/link";
 
-export default function ConsentPage() {
-  const appName = "Medincident";
-  const appUrl = "sosiska.com";
-  const botUserName = "@SosiskaBot";
+export default async function ConsentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ uid?: string }>;
+}) {
+  const { uid } = await searchParams;
 
-  const refuseUrl = "/login";
-  const acceptUrl = "/";
+  if (!uid) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-red-500">
+        Ошибка: UID не найден
+      </div>
+    );
+  }
+
+  const provider = await getOidcProvider();
+  const interaction = await provider.Interaction.find(uid);
+
+  if (!interaction) {
+    return (
+        <div className="flex min-h-screen items-center justify-center text-tg-text-secondary">
+          Сессия истекла. Пожалуйста, начните вход заново.
+        </div>
+    );
+  }
+
+  const { prompt, params } = interaction;
+  const client = await provider.Client.find(params.client_id as string);
+
+  const appName = client?.clientName || "Неизвестное приложение";
+  const appUrl = client?.redirectUris?.[0] ? new URL(client.redirectUris[0]).host : "sosiska.com";
+  const botUserName = ENV.TELEGRAM_BOT_NAME ? `@${ENV.TELEGRAM_BOT_NAME}` : "@BotSosiska";
+
+  const scopes = (prompt.details.missingOIDCScope as string[]) || [];
+
+  const confirmUrl = `/api/oidc/interaction/${uid}/confirm`;
+  const abortUrl = `/api/oidc/interaction/${uid}/abort`;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-tg-bg p-4 font-sans text-foreground">
+      {/* --- Фон --- */}
       <div className="absolute -left-[10%] -top-[10%] h-120 w-120 rounded-full bg-tg-blue/5 blur-3xl" />
       <div className="absolute -bottom-[10%] -right-[10%] h-96 w-96 rounded-full bg-blue-400/5 blur-3xl" />
 
       <Card className="relative z-10 w-full max-w-sm rounded-3xl border border-black/5 bg-tg-bg/75 shadow-xl backdrop-blur-xl">
         <CardContent className="p-8">
           <div className="mb-6 text-center">
+             {/* --- Утка --- */}
             <iframe
               src="https://tenor.com/embed/8528851418612932470"
               className="pointer-events-none h-full w-full border-0 h-24 w-24 mx-auto antialiased"
@@ -43,12 +77,24 @@ export default function ConsentPage() {
             Это приложение запрашивает доступ <br /> к вашим данным:
           </p>
 
+          {/* Список прав */}
           <div className="mb-8 overflow-hidden rounded-xl bg-tg-bg">
-            <ScopeRow
-              icon={<User size={20} />}
-              title="Профиль"
-              desc="Имя, юзернейм и фото"
-            />
+            {scopes.includes("profile") && (
+                <ScopeRow
+                  icon={<User size={20} />}
+                  title="Профиль"
+                  desc="Имя, юзернейм и фото"
+                />
+            )}
+            
+            {scopes.includes("email") && (
+                <ScopeRow
+                  icon={<Mail size={20} />}
+                  title="Email"
+                  desc="Ваш Email адрес"
+                />
+            )}
+
             <ScopeRow
               icon={<Hash size={20} />}
               title="Telegram ID"
@@ -58,19 +104,24 @@ export default function ConsentPage() {
           </div>
 
           <div className="flex gap-3">
-            <Button
-              variant="ghost"
-              className="h-12 flex-1 rounded-xl text-base font-semibold text-tg-blue hover:bg-tg-blue/10 hover:text-tg-blue"
-              asChild
-            >
-              <Link href={refuseUrl}>Отмена</Link>
-            </Button>
-            <Button
-              className="h-12 flex-1 rounded-xl bg-tg-blue text-base font-semibold text-white shadow-none transition-all hover:bg-tg-blue/90 active:scale-[0.98]"
-              asChild
-            >
-              <Link href={acceptUrl}>Разрешить</Link>
-            </Button>
+            <form action={abortUrl} method="POST" className="flex-1">
+                <Button
+                  variant="ghost"
+                  className="h-12 w-full rounded-xl text-base font-semibold text-tg-blue hover:bg-tg-blue/10 hover:text-tg-blue"
+                  type="submit"
+                >
+                  Отмена
+                </Button>
+            </form>
+
+            <form action={confirmUrl} method="POST" className="flex-1">
+                <Button
+                  className="h-12 w-full rounded-xl bg-tg-blue text-base font-semibold text-white shadow-none transition-all hover:bg-tg-blue/90 active:scale-[0.98]"
+                  type="submit"
+                >
+                  Разрешить
+                </Button>
+            </form>
           </div>
         </CardContent>
       </Card>
