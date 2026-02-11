@@ -1,5 +1,5 @@
 dev:
-	npm run dev --turbo
+	npm run dev --turbo -- --port 8081
 
 release:
 	npm run build

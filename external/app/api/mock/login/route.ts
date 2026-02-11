@@ -1,3 +1,4 @@
+import { ENV } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 // Типы для наглядности
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   // Базовая структура бота и клиента
   const baseData = {
     client: { name: "MedIncident" },
-    bot: { name: "Auth Bot", username: "my_auth_bot", url: "https://t.me/my_auth_bot" },
+    bot: { name: "SosiskaBot", username: ENV.TELEGRAM_BOT_NAME, url: "https://t.me/my_auth_bot" },
   };
 
   const mockUser: User = {
