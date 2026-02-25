@@ -1,53 +1,16 @@
-package entities
+package entity
 
 import (
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
 )
 
-// ErrInvariantCheckFailed is the base error for all domain invariant violations.
 var ErrInvariantCheckFailed = errors.New("invariant check failed")
 
-func validateUserId(id int64) error {
-	if id <= 0 {
-		return fmt.Errorf("user id must be positive: %w", ErrInvariantCheckFailed)
-	}
-	return nil
-}
-
-func validateBotId(id int64) error {
-	if id <= 0 {
-		return fmt.Errorf("bot id must be positive: %w", ErrInvariantCheckFailed)
-	}
-	return nil
-}
-
-func validateFirstName(firstName string) error {
-	if firstName == "" {
-		return fmt.Errorf("first name cannot be empty: %w", ErrInvariantCheckFailed)
-	}
-	if strings.TrimSpace(firstName) != firstName {
-		return fmt.Errorf("first name contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
-	}
-	return nil
-}
-
-func validateLastName(lastName string) error {
-	if lastName == "" {
-		return fmt.Errorf("last name cannot be empty: %w", ErrInvariantCheckFailed)
-	}
-	if strings.TrimSpace(lastName) != lastName {
-		return fmt.Errorf("last name contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
-	}
-	return nil
-}
-
-// validateUsername ensures the username contains only valid Telegram username characters.
-// Telegram usernames can only contain letters, numbers and underscores.
 func validateUsername(username string) error {
 	if username == "" {
 		return fmt.Errorf("username cannot be empty: %w", ErrInvariantCheckFailed)
@@ -63,29 +26,19 @@ func validateUsername(username string) error {
 	return nil
 }
 
+func validateBotId(id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("bot id must be positive: %w", ErrInvariantCheckFailed)
+	}
+	return nil
+}
+
 func validateBotName(name string) error {
 	if name == "" {
 		return fmt.Errorf("bot name cannot be empty: %w", ErrInvariantCheckFailed)
 	}
 	if strings.TrimSpace(name) != name {
 		return fmt.Errorf("bot name contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
-	}
-	return nil
-}
-
-func validateClientId(clientId string) error {
-	if clientId == "" {
-		return fmt.Errorf("client id cannot be empty: %w", ErrInvariantCheckFailed)
-	}
-	if strings.TrimSpace(clientId) != clientId {
-		return fmt.Errorf("client id contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
-	}
-	return nil
-}
-
-func validateBotUsername(username string) error {
-	if err := validateUsername(username); err != nil {
-		return fmt.Errorf("invalid bot username: %w", err)
 	}
 	return nil
 }
@@ -119,23 +72,60 @@ func validateBotToken(token string) error {
 	return nil
 }
 
-func validateLoginUserId(id int64) error {
+func validateBotUsername(username string) error {
+	if err := validateUsername(username); err != nil {
+		return fmt.Errorf("invalid bot username: %w", err)
+	}
+	return nil
+}
+
+func validateClientId(clientId string) error {
+	if clientId == "" {
+		return fmt.Errorf("client id cannot be empty: %w", ErrInvariantCheckFailed)
+	}
+	if strings.TrimSpace(clientId) != clientId {
+		return fmt.Errorf("client id contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
+	}
+	return nil
+}
+
+func validateUserId(id int64) error {
 	if id <= 0 {
 		return fmt.Errorf("user id must be positive: %w", ErrInvariantCheckFailed)
 	}
 	return nil
 }
 
-func validateLoginBotId(id int64) error {
-	if id <= 0 {
-		return fmt.Errorf("bot id must be positive: %w", ErrInvariantCheckFailed)
+func validateUserFirstName(firstName string) error {
+	if firstName == "" {
+		return fmt.Errorf("first name cannot be empty: %w", ErrInvariantCheckFailed)
+	}
+	if strings.TrimSpace(firstName) != firstName {
+		return fmt.Errorf("first name contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
 	}
 	return nil
 }
 
-func validateIP(ip net.IP) error {
-	if len(ip) == 0 || ip.Equal(net.IPv4zero) || ip.Equal(net.IPv6zero) {
-		return fmt.Errorf("ip address cannot be nil or invalid: %w", ErrInvariantCheckFailed)
+func validateUserLastName(lastName string) error {
+	if lastName == "" {
+		return fmt.Errorf("last name cannot be empty: %w", ErrInvariantCheckFailed)
+	}
+	if strings.TrimSpace(lastName) != lastName {
+		return fmt.Errorf("last name contains leading or trailing whitespace: %w", ErrInvariantCheckFailed)
+	}
+	return nil
+}
+
+func validateUserUsername(username string) error {
+	if err := validateUsername(username); err != nil {
+		return fmt.Errorf("invalid user username: %w", err)
+	}
+	return nil
+}
+
+func validateIP(ip netip.Addr) error {
+	if !ip.IsValid() || ip.IsUnspecified() {
+		return fmt.Errorf("invalid IP address: %w", ErrInvariantCheckFailed)
 	}
 	return nil
 }
@@ -148,7 +138,7 @@ func validateUrl(url *url.URL) error {
 		return fmt.Errorf("url scheme must be http or https: %w", ErrInvariantCheckFailed)
 	}
 	if url.Host == "" {
-		return fmt.Errorf("url must have a host: %w", ErrInvariantCheckFailed)
+		return fmt.Errorf("url host cannot be empty: %w", ErrInvariantCheckFailed)
 	}
 	return nil
 }

@@ -9,14 +9,13 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/samber/do/v2"
+	"github.com/ulbwa/telegram-oidc-provider/internal/infrastructure/config"
 	"gopkg.in/natefinch/lumberjack.v2"
-
-	"github.com/ulbwa/telegram-oidc-provider/internal/common"
 )
 
 func provideZerolog(injector do.Injector) {
 	do.Provide(injector, func(i do.Injector) (zerolog.Logger, error) {
-		cfg, err := do.Invoke[*common.Config](i)
+		cfg, err := do.Invoke[*config.Config](i)
 		if err != nil {
 			// Fallback to default configuration
 			return zerolog.New(os.Stdout).With().Timestamp().Logger(), nil
@@ -87,7 +86,7 @@ func provideZerolog(injector do.Injector) {
 	})
 }
 
-func createConsoleWriter(cfg common.ConsoleLogConfig) io.Writer {
+func createConsoleWriter(cfg config.ConsoleLogConfig) io.Writer {
 	if cfg.Pretty {
 		consoleWriter := zerolog.ConsoleWriter{
 			Out:        os.Stdout,
@@ -100,7 +99,7 @@ func createConsoleWriter(cfg common.ConsoleLogConfig) io.Writer {
 }
 
 // createFileWriter creates a file writer with optional rotation support.
-func createFileWriter(cfg common.FileLogConfig) io.Writer {
+func createFileWriter(cfg config.FileLogConfig) io.Writer {
 	// Ensure log directory exists
 	dir := filepath.Dir(cfg.Path)
 	if dir != "" && dir != "." {

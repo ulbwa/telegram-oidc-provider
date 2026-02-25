@@ -1,29 +1,20 @@
-package entities
+package entity
 
-import (
-	"time"
-)
+import "time"
 
 // Bot represents a Telegram bot.
 type Bot struct {
 	Id        int64
 	Name      string
-	ClientId  string
+	ClientId  *string
 	Username  string
 	Token     string
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 }
 
-// NewBot creates a new Bot instance with validation.
-func NewBot(id int64, name string, clientId string, username string, token string) (*Bot, error) {
-	if err := validateBotId(id); err != nil {
-		return nil, err
-	}
+func NewBot(id int64, name string, username string, token string) (*Bot, error) {
 	if err := validateBotName(name); err != nil {
-		return nil, err
-	}
-	if err := validateClientId(clientId); err != nil {
 		return nil, err
 	}
 	if err := validateBotUsername(username); err != nil {
@@ -32,11 +23,9 @@ func NewBot(id int64, name string, clientId string, username string, token strin
 	if err := validateBotToken(token); err != nil {
 		return nil, err
 	}
-
 	return &Bot{
 		Id:        id,
 		Name:      name,
-		ClientId:  clientId,
 		Username:  username,
 		Token:     token,
 		CreatedAt: time.Now(),
@@ -67,6 +56,18 @@ func (b *Bot) SetName(name string) error {
 	return nil
 }
 
+func (b *Bot) SetUsername(username string) error {
+	if err := validateBotUsername(username); err != nil {
+		return err
+	}
+	if b.Username == username {
+		return nil
+	}
+	b.Username = username
+	b.Touch()
+	return nil
+}
+
 func (b *Bot) SetToken(token string) error {
 	if err := validateBotToken(token); err != nil {
 		return err
@@ -75,6 +76,20 @@ func (b *Bot) SetToken(token string) error {
 		return nil
 	}
 	b.Token = token
+	b.Touch()
+	return nil
+}
+
+func (b *Bot) SetClientId(clientId *string) error {
+	if clientId != nil {
+		if err := validateClientId(*clientId); err != nil {
+			return err
+		}
+	}
+	if b.ClientId == clientId {
+		return nil
+	}
+	b.ClientId = clientId
 	b.Touch()
 	return nil
 }

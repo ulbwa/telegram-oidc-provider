@@ -5,7 +5,7 @@ import (
 
 	gormzerolog "github.com/mpalmer/gorm-zerolog"
 	"github.com/samber/do/v2"
-	"github.com/ulbwa/telegram-oidc-provider/internal/common"
+	"github.com/ulbwa/telegram-oidc-provider/internal/infrastructure/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -27,12 +27,12 @@ func (p *postgresConnection) Shutdown(ctx context.Context) error {
 func provideGorm(injector do.Injector) {
 	// Provide dialector
 	do.Provide(injector, func(i do.Injector) (gorm.Dialector, error) {
-		cfg, err := do.Invoke[*common.Config](i)
+		cfg, err := do.Invoke[*config.Config](i)
 		if err != nil {
 			return nil, err
 		}
 
-		return postgres.Open(cfg.Database.DSN), nil
+		return postgres.Open(cfg.Database.DSN.String()), nil
 	})
 
 	// Provide wrapped connection with graceful shutdown support
