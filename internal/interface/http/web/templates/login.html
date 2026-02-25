@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loading...</title>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <style>
+        /* Изначально вообще ничего не показываем */
+        body {
+            margin: 0;
+            visibility: hidden;
+        }
+
+        .spinner-wrapper {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #1a8ad5;
+            border-top: 6px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="spinner-wrapper">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        const MINI_APP_CALLBACK_URI = "{{ .MiniAppCallbackUri }}";
+        const WIDGET_URI = "{{ .WidgetUri }}";
+        const TIMEOUT = 5000;
+
+        function redirectToWidgetLogin() {
+            window.location.replace(WIDGET_URI);
+        }
+
+        function redirectToMiniAppCallback(initData) {
+            window.location.replace(MINI_APP_CALLBACK_URI + "&" + initData);
+        }
+
+        function applyTelegramTheme(webApp) {
+            if (!webApp.themeParams) return false;
+
+            const bg = webApp.themeParams.bg_color;
+            const text = webApp.themeParams.text_color;
+
+            if (bg) document.body.style.backgroundColor = bg;
+            if (text) document.body.style.color = text;
+
+            return true;
+        }
+
+        function showContent() {
+            document.body.style.visibility = "visible";
+        }
+
+        function handleTelegram() {
+            if (!window.Telegram || !window.Telegram.WebApp) {
+                redirectToWidgetLogin();
+                return;
+            }
+
+            const webApp = window.Telegram.WebApp;
+            webApp.ready();
+
+            const initData = webApp.initData;
+
+            if (typeof initData !== "string" || initData.length === 0) {
+                redirectToWidgetLogin();
+                return;
+            }
+
+            // применяем тему если есть
+            const themed = applyTelegramTheme(webApp);
+
+            // если темы нет — фолбэк на твой светлый стиль
+            if (!themed) {
+                document.body.style.backgroundColor = "#ffffff";
+            }
+
+            showContent();
+
+            redirectToMiniAppCallback(initData);
+        }
+
+        const failSafe = setTimeout(() => {
+            redirectToWidgetLogin();
+        }, TIMEOUT);
+
+        window.addEventListener("load", () => {
+            try {
+                handleTelegram();
+                clearTimeout(failSafe);
+            } catch (_) {
+                redirectToWidgetLogin();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

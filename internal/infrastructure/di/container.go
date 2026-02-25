@@ -2,10 +2,10 @@ package di
 
 import (
 	"github.com/samber/do/v2"
-	"github.com/ulbwa/telegram-oidc-provider/internal/common"
+	"github.com/ulbwa/telegram-oidc-provider/internal/infrastructure/config"
 )
 
-func NewContainer(cfg *common.Config) do.Injector {
+func NewContainer(cfg *config.Config) do.Injector {
 	injector := do.New()
 
 	// Config
@@ -13,10 +13,12 @@ func NewContainer(cfg *common.Config) do.Injector {
 
 	provideZerolog(injector)
 	provideGorm(injector)
+	provideRedis(injector)
+	provideHydra(injector)
 	provideServices(injector)
 	provideRepositories(injector)
 	provideUsecases(injector)
-	provideFiberApp(injector)
+	provideEchoApp(injector)
 
 	return injector
 }
