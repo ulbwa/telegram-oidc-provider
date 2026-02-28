@@ -246,6 +246,108 @@ func (uc *ResolveLoginChallenge) acceptLoginRequest(ctx context.Context, loginCh
 	return completed, nil
 }
 
+func (uc *ResolveLoginChallenge) mapRejectError(err error) (string, int64, string) {
+	if err == nil {
+		return "server_error", http.StatusInternalServerError, "unexpected authentication error"
+	}
+
+	var gatewayTimeoutErr *GatewayTimeoutErr
+	if errors.As(err, &gatewayTimeoutErr) {
+		return "temporarily_unavailable", http.StatusServiceUnavailable, "authentication service is temporarily unavailable"
+	}
+
+	var badGatewayErr *BadGatewayErr
+	if errors.As(err, &badGatewayErr) {
+		return "temporarily_unavailable", http.StatusServiceUnavailable, "authentication service is temporarily unavailable"
+	}
+
+	var objectInvalidErr *ObjectInvalidErr
+	if errors.As(err, &objectInvalidErr) {
+		if objectInvalidErr.Object == "bot" && objectInvalidErr.Field == "token" {
+			return "unauthorized_client", http.StatusBadRequest, "client is linked to invalid bot credentials"
+		}
+		if objectInvalidErr.Object == "login" && objectInvalidErr.Field == "challenge" {
+			return "invalid_request", http.StatusBadRequest, "invalid login challenge"
+		}
+		return "invalid_request", http.StatusBadRequest, "invalid authentication request"
+	}
+
+	var objectNotFoundErr *ObjectNotFoundErr
+	if errors.As(err, &objectNotFoundErr) {
+		if objectNotFoundErr.Object == "client" {
+			return "unauthorized_client", http.StatusBadRequest, "oauth2 client is not linked to bot configuration"
+		}
+		return "access_denied", http.StatusForbidden, "authentication cannot be completed"
+	}
+
+	if errors.Is(err, ErrInvalidInput) {
+		return "invalid_request", http.StatusBadRequest, "invalid authentication request"
+	}
+
+	if errors.Is(err, ErrUnexpected) {
+		return "server_error", http.StatusInternalServerError, "internal authentication error"
+	}
+
+	return "server_error", http.StatusInternalServerError, "internal authentication error"
+}
+
+func (uc *ResolveLoginChallenge) rejectLoginRequest(ctx context.Context, loginChallenge string, reason error) (*ResolveLoginChallengeOutput, error) {
+	reasonDebug := "unknown"
+	if reason != nil {
+		reasonDebug = reason.Error()
+	}
+
+	oauth2Error, statusCode, description := uc.mapRejectError(reason)
+	rejectReq := hydra.NewRejectRequest()
+	rejectReq.SetError(oauth2Error)
+	rejectReq.SetStatusCode(int64(statusCode))
+	rejectReq.SetErrorDescription(description)
+	rejectReq.SetErrorHint("authentication request was rejected")
+	rejectReq.SetErrorDebug(reasonDebug)
+
+	completed, resp, err := uc.hydra.AdminApi.
+		RejectLoginRequest(ctx).
+		LoginChallenge(loginChallenge).
+		RejectRequest(*rejectReq).
+		Execute()
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, NewGatewayTimeoutErr("hydra")
+		}
+		if resp != nil {
+			if resp.StatusCode >= http.StatusInternalServerError {
+				return nil, NewBadGatewayErr("hydra")
+			}
+			return nil, ErrUnexpected
+		}
+		return nil, NewBadGatewayErr("hydra")
+	}
+
+	if completed == nil || completed.RedirectTo == "" {
+		return nil, ErrUnexpected
+	}
+
+	return uc.buildRedirectOutput(completed.RedirectTo), nil
+}
+
+func (uc *ResolveLoginChallenge) rejectAfterChallenge(ctx context.Context, loginChallenge string, reason error) (*ResolveLoginChallengeOutput, error) {
+	zerolog.Ctx(ctx).Warn().
+		Err(reason).
+		Str("login_challenge", loginChallenge).
+		Msg("resolve login challenge failed, rejecting login request in hydra")
+
+	output, err := uc.rejectLoginRequest(ctx, loginChallenge, reason)
+	if err != nil {
+		zerolog.Ctx(ctx).Error().
+			Err(err).
+			Str("login_challenge", loginChallenge).
+			Msg("failed to reject login request in hydra")
+		return nil, err
+	}
+
+	return output, nil
+}
+
 func (uc *ResolveLoginChallenge) Execute(ctx context.Context, input *ResolveLoginChallengeInput) (*ResolveLoginChallengeOutput, error) {
 	if input == nil {
 		return nil, errors.New("input is nil")
@@ -258,20 +360,20 @@ func (uc *ResolveLoginChallenge) Execute(ctx context.Context, input *ResolveLogi
 
 	loginRequest, err := uc.getLoginRequest(ctx, challenge)
 	if err != nil {
-		return nil, err
+		return uc.rejectAfterChallenge(ctx, challenge, err)
 	}
 	if loginRequest == nil || loginRequest.Client.ClientId == nil {
-		return nil, ErrUnexpected
+		return uc.rejectAfterChallenge(ctx, challenge, ErrUnexpected)
 	}
 	clientId := *loginRequest.Client.ClientId
 
 	bot, err := uc.getBot(ctx, clientId)
 	if err != nil {
-		return nil, err
+		return uc.rejectAfterChallenge(ctx, challenge, err)
 	}
 
 	if err := uc.verifyBotToken(ctx, bot.Token); err != nil {
-		return nil, err
+		return uc.rejectAfterChallenge(ctx, challenge, err)
 	}
 
 	if loginRequest.Skip {
