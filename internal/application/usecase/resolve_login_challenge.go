@@ -21,7 +21,6 @@ type ResolveLoginChallenge struct {
 	baseUri         *url.URL
 	telegramAuthUri *url.URL
 
-	transactor    service.Transactor
 	hydra         *hydra.APIClient
 	botRepo       repository.BotRepositoryPort
 	botUserRepo   repository.BotUserRepositoryPort
@@ -31,7 +30,6 @@ type ResolveLoginChallenge struct {
 func NewResolveLoginChallenge(
 	baseUri *url.URL,
 	telegramAuthUri *url.URL,
-	transactor service.Transactor,
 	hydraClient *hydra.APIClient,
 	botRepo repository.BotRepositoryPort,
 	botUserRepo repository.BotUserRepositoryPort,
@@ -42,9 +40,6 @@ func NewResolveLoginChallenge(
 	}
 	if telegramAuthUri == nil {
 		return nil, errors.New("telegram auth URI is nil")
-	}
-	if transactor == nil {
-		return nil, errors.New("transactor is nil")
 	}
 	if hydraClient == nil {
 		return nil, errors.New("hydra client is nil")
@@ -62,7 +57,6 @@ func NewResolveLoginChallenge(
 	return &ResolveLoginChallenge{
 		baseUri:         baseUri,
 		telegramAuthUri: telegramAuthUri,
-		transactor:      transactor,
 		hydra:           hydraClient,
 		botRepo:         botRepo,
 		botUserRepo:     botUserRepo,
@@ -188,17 +182,9 @@ func (uc *ResolveLoginChallenge) buildRedirectOutput(redirectUri string) *Resolv
 	}
 }
 
-func (uc *ResolveLoginChallenge) updateLastLogin(ctx context.Context, botId, userId int64) error {
+func (uc *ResolveLoginChallenge) ensureBotUserExists(ctx context.Context, botId, userId int64) error {
 	var user entity.BotUser
 	if err := uc.botUserRepo.GetByBotAndUser(ctx, botId, userId, &user); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return NewObjectNotFoundErr("user", userId)
-		}
-		return ErrUnexpected
-	}
-
-	user.UpdateLastLogin()
-	if err := uc.botUserRepo.Update(ctx, &user); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return NewObjectNotFoundErr("user", userId)
 		}
@@ -379,9 +365,7 @@ func (uc *ResolveLoginChallenge) Execute(ctx context.Context, input *ResolveLogi
 	if loginRequest.Skip {
 		skipUserId, err := uc.parseSubjectUserId(loginRequest.Subject)
 		if err == nil {
-			err = uc.transactor.RunInTransaction(ctx, func(txCtx context.Context) error {
-				return uc.updateLastLogin(txCtx, bot.Id, skipUserId)
-			})
+			err = uc.ensureBotUserExists(ctx, bot.Id, skipUserId)
 		}
 
 		if err == nil {

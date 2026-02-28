@@ -12,6 +12,7 @@ import (
 	"github.com/ulbwa/telegram-oidc-provider/internal/application/usecase"
 	"github.com/ulbwa/telegram-oidc-provider/internal/infrastructure/config"
 	apihttp "github.com/ulbwa/telegram-oidc-provider/internal/interface/http/api"
+	webhttp "github.com/ulbwa/telegram-oidc-provider/internal/interface/http/web"
 )
 
 func provideEchoApp(injector do.Injector) {
@@ -22,6 +23,11 @@ func provideEchoApp(injector do.Injector) {
 		}
 
 		syncBot, err := do.Invoke[*usecase.SyncBot](i)
+		if err != nil {
+			return nil, err
+		}
+
+		resolveLoginChallenge, err := do.Invoke[*usecase.ResolveLoginChallenge](i)
 		if err != nil {
 			return nil, err
 		}
@@ -42,18 +48,31 @@ func provideEchoApp(injector do.Injector) {
 			return nil, err
 		}
 
+		errorUri := *baseUri
+		errorUri = *errorUri.JoinPath("/error")
+		webServer := webhttp.NewServer(&errorUri, resolveLoginChallenge)
+
+		webRenderer, err := webhttp.NewRenderer()
+		if err != nil {
+			return nil, err
+		}
+
 		echoApp := echo.New()
 		echoApp.HideBanner = shouldHideEchoBanner(cfg)
 		echoApp.HidePort = shouldHideEchoBanner(cfg)
+		echoApp.Renderer = webRenderer
+
+		webServer.Register(echoApp)
 
 		// Add request/response validation middleware for API endpoints
 		spec, err := generated.GetSwagger()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get OpenAPI spec: %w", err)
 		}
-		echoApp.Use(echo_middleware.OapiRequestValidator(spec))
+		apiGroup := echoApp.Group("")
+		apiGroup.Use(echo_middleware.OapiRequestValidator(spec))
 
-		generated.RegisterHandlers(echoApp, generated.NewStrictHandler(apiServer, nil))
+		generated.RegisterHandlers(apiGroup, generated.NewStrictHandler(apiServer, nil))
 
 		return echoApp, nil
 	})
