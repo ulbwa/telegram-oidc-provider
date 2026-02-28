@@ -24,6 +24,6 @@ func provideUsecases(injector do.Injector) {
 			return nil, err
 		}
 
-		return usecase.NewSyncBot(transactor, botRepo, botVerifier), nil
+		return usecase.NewSyncBot(transactor, botRepo, botVerifier)
 	})
 }

@@ -2,67 +2,54 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
-	"github.com/ulbwa/telegram-oidc-provider/internal/application/service"
-	"github.com/ulbwa/telegram-oidc-provider/internal/domain/entity"
+	"github.com/ulbwa/telegram-oidc-provider/internal/application/usecase"
 )
 
 func (s *server) Login(c echo.Context) error {
-	loginChallenge := c.QueryParam("login_challenge")
-	if loginChallenge == "" {
-		return s.fallbackToErrorPage(c, "invalid_request")
-	}
-
-	loginInfo, _, err := s.hydra.AdminApi.GetLoginRequest(c.Request().Context()).LoginChallenge(loginChallenge).Execute()
+	output, err := s.resolveLoginChallengeUsecase.Execute(c.Request().Context(), &usecase.ResolveLoginChallengeInput{
+		LoginChallenge: c.QueryParam("login_challenge"),
+	})
 	if err != nil {
-		zerolog.Ctx(c.Request().Context()).Error().Err(err).Msg("failed to get login request from hydra")
-		return s.fallbackToErrorPage(c, ErrCodeInvalidRequest)
+		zerolog.Ctx(c.Request().Context()).Error().Err(err).Msg("failed to execute login usecase")
+
+		if errors.Is(err, usecase.ErrInvalidInput) {
+			var objectNotFoundErr *usecase.ObjectNotFoundErr
+			if errors.As(err, &objectNotFoundErr) && objectNotFoundErr.Object == "client" {
+				return s.fallbackToErrorPage(c, ErrCodeInvalidClient)
+			}
+
+			var objectInvalidErr *usecase.ObjectInvalidErr
+			if errors.As(err, &objectInvalidErr) && objectInvalidErr.Object == "bot" && objectInvalidErr.Field == "token" {
+				return s.fallbackToErrorPage(c, ErrCodeInvalidBotCredentials)
+			}
+
+			return s.fallbackToErrorPage(c, ErrCodeInvalidRequest)
+		}
+
+		return s.fallbackToErrorPage(c, ErrCodeInternalError)
 	}
 
-	var bot entity.Bot
-	if err := s.botRepo.GetByClientID(c.Request().Context(), *loginInfo.Client.ClientId, &bot); err != nil {
-		zerolog.Ctx(c.Request().Context()).Error().Err(err).Msg("failed to get bot by client id")
-		return s.fallbackToErrorPage(c, ErrCodeInvalidClient)
+	if output == nil {
+		return s.fallbackToErrorPage(c, ErrCodeInternalError)
 	}
 
-	if _, err := s.botVerifier.Verify(c.Request().Context(), bot.Token, nil); err != nil {
-		zerolog.Ctx(c.Request().Context()).Error().Err(err).Msg("failed to verify bot token")
-		if errors.Is(err, service.ErrTelegramBotTokenInvalid) {
-			return s.fallbackToErrorPage(c, ErrCodeInvalidBotCredentials)
-		} else {
+	if output.Action == usecase.ResolveLoginChallengeActionRedirect {
+		if output.RedirectUri == nil {
 			return s.fallbackToErrorPage(c, ErrCodeInternalError)
 		}
+		return c.Redirect(http.StatusFound, *output.RedirectUri)
 	}
 
-	origin := s.baseUri
-	origin = origin.JoinPath("/login")
-
-	widgetCallbackUri := s.baseUri
-	widgetCallbackUri = origin.JoinPath("/widget/callback")
-	widgetCallbackUriQuery := widgetCallbackUri.Query()
-	widgetCallbackUriQuery.Set("login_challenge", loginChallenge)
-	widgetCallbackUri.RawQuery = widgetCallbackUriQuery.Encode()
-
-	widgetUri := s.telegramAuthUri
-	widgetUriQuery := widgetUri.Query()
-	widgetUriQuery.Set("bot_id", fmt.Sprintf("%d", bot.Id))
-	widgetUriQuery.Set("origin", origin.String())
-	widgetUriQuery.Set("request_access", "write")
-	widgetUriQuery.Set("return_to", widgetCallbackUri.String())
-	widgetUri.RawQuery = widgetUriQuery.Encode()
-
-	miniappCallbackUri := s.baseUri
-	miniappCallbackUri = origin.JoinPath("/miniapp/callback")
-	miniappCallbackUriQuery := miniappCallbackUri.Query()
-	miniappCallbackUriQuery.Set("login_challenge", loginChallenge)
-	miniappCallbackUri.RawQuery = miniappCallbackUriQuery.Encode()
+	if output.WidgetUri == nil || output.MiniAppCallbackUri == nil {
+		return s.fallbackToErrorPage(c, ErrCodeInternalError)
+	}
 
 	return c.Render(http.StatusOK, "login", map[string]any{
-		"WidgetUri":          widgetUri.String(),
-		"MiniAppCallbackUri": miniappCallbackUri.String(),
+		"WidgetUri":          *output.WidgetUri,
+		"MiniAppCallbackUri": *output.MiniAppCallbackUri,
 	})
 }

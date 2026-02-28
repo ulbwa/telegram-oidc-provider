@@ -6,21 +6,14 @@ import (
 	"net/url"
 
 	"github.com/labstack/echo/v4"
-	hydra "github.com/ory/hydra-client-go"
-	"github.com/ulbwa/telegram-oidc-provider/internal/application/service"
-	"github.com/ulbwa/telegram-oidc-provider/internal/domain/repository"
+	"github.com/ulbwa/telegram-oidc-provider/internal/application/usecase"
 	"github.com/ulbwa/telegram-oidc-provider/internal/interface/http/web/templates"
 )
 
 type server struct {
-	baseUri         *url.URL
-	errorUri        *url.URL
-	telegramAuthUri *url.URL // url.Parse("https://oauth.telegram.org/auth")
+	errorUri *url.URL
 
-	hydra       *hydra.APIClient
-	transactor  service.Transactor
-	botRepo     repository.BotRepositoryPort
-	botVerifier service.TelegramTokenVerifier
+	resolveLoginChallengeUsecase *usecase.ResolveLoginChallenge
 }
 
 type renderer struct {
@@ -32,22 +25,12 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, _ echo.Con
 }
 
 func NewServer(
-	baseUri *url.URL,
 	errorUri *url.URL,
-	telegramAuthUri *url.URL,
-	hydraClient *hydra.APIClient,
-	transactor service.Transactor,
-	botRepo repository.BotRepositoryPort,
-	botVerifier service.TelegramTokenVerifier,
+	resolveLoginChallengeUsecase *usecase.ResolveLoginChallenge,
 ) *server {
 	return &server{
-		baseUri:         baseUri,
-		errorUri:        errorUri,
-		telegramAuthUri: telegramAuthUri,
-		hydra:           hydraClient,
-		transactor:      transactor,
-		botRepo:         botRepo,
-		botVerifier:     botVerifier,
+		errorUri:                     errorUri,
+		resolveLoginChallengeUsecase: resolveLoginChallengeUsecase,
 	}
 }
 

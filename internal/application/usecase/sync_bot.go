@@ -23,20 +23,30 @@ func NewSyncBot(
 	transactor service.Transactor,
 	botRepo repository.BotRepositoryPort,
 	tokenVerifier service.TelegramTokenVerifier,
-) *SyncBot {
+) (*SyncBot, error) {
+	if transactor == nil {
+		return nil, errors.New("transactor is nil")
+	}
+	if botRepo == nil {
+		return nil, errors.New("bot repository is nil")
+	}
+	if tokenVerifier == nil {
+		return nil, errors.New("telegram token verifier is nil")
+	}
+
 	return &SyncBot{
 		transactor:    transactor,
 		botRepo:       botRepo,
 		tokenVerifier: tokenVerifier,
-	}
+	}, nil
 }
 
 type (
 	// SyncBotStatus enum for bot synchronization status
 	// ENUM(
-	// Created
-	// Updated
-	// NotUpdated
+	//     Created
+	//     Updated
+	//     NotUpdated
 	// )
 	SyncBotStatus string
 
