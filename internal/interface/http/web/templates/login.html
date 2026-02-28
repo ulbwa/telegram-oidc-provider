@@ -9,7 +9,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
     <style>
-        /* Изначально вообще ничего не показываем */
         body {
             margin: 0;
             visibility: hidden;
@@ -90,10 +89,8 @@
                 return;
             }
 
-            // применяем тему если есть
             const themed = applyTelegramTheme(webApp);
 
-            // если темы нет — фолбэк на твой светлый стиль
             if (!themed) {
                 document.body.style.backgroundColor = "#ffffff";
             }
