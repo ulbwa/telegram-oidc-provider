@@ -9,8 +9,9 @@ import (
 )
 
 type server struct {
-	baseUri *url.URL
-	syncBot *usecase.SyncBot
+	baseUri       *url.URL
+	syncBot       *usecase.SyncBot
+	loginByWidget *usecase.LoginByWidget
 }
 
 var _ generated.StrictServerInterface = (*server)(nil)
@@ -18,6 +19,7 @@ var _ generated.StrictServerInterface = (*server)(nil)
 func NewServer(
 	baseUri *url.URL,
 	syncBot *usecase.SyncBot,
+	loginByWidget *usecase.LoginByWidget,
 ) (generated.StrictServerInterface, error) {
 	if baseUri == nil {
 		return nil, errors.New("baseUri cannot be nil")
@@ -25,9 +27,16 @@ func NewServer(
 	if baseUri.Scheme == "" || baseUri.Host == "" {
 		return nil, errors.New("baseUri must have scheme and host")
 	}
+	if syncBot == nil {
+		return nil, errors.New("syncBot cannot be nil")
+	}
+	if loginByWidget == nil {
+		return nil, errors.New("loginByWidget cannot be nil")
+	}
 
 	return &server{
-		baseUri: baseUri,
-		syncBot: syncBot,
+		baseUri:       baseUri,
+		syncBot:       syncBot,
+		loginByWidget: loginByWidget,
 	}, nil
 }
