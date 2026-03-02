@@ -102,7 +102,7 @@ func (uc *ResolveLoginChallenge) getBot(ctx context.Context, clientId string) (*
 }
 
 func (uc *ResolveLoginChallenge) verifyBotToken(ctx context.Context, botToken string) error {
-	if _, err := uc.tokenVerifier.Verify(ctx, botToken, service.NewVerifyOptions(service.WithSkipCacheRead())); err != nil {
+	if _, err := uc.tokenVerifier.Verify(ctx, botToken, nil); err != nil {
 		if errors.Is(err, service.ErrTelegramBotTokenMalformed) {
 			return fmt.Errorf(
 				"%w: %w",
