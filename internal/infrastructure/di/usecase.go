@@ -77,4 +77,57 @@ func provideUsecases(injector do.Injector) {
 			tokenVerifier,
 		)
 	})
+
+	do.Provide(injector, func(i do.Injector) (*usecase.LoginByWidget, error) {
+		cfg, err := do.Invoke[*config.Config](i)
+		if err != nil {
+			return nil, err
+		}
+
+		transactor, err := do.Invoke[service.Transactor](i)
+		if err != nil {
+			return nil, err
+		}
+
+		hydraClient, err := do.Invoke[*hydra.APIClient](i)
+		if err != nil {
+			return nil, err
+		}
+
+		widgetDataParser, err := do.Invoke[service.TelegramWidgetDataParser](i)
+		if err != nil {
+			return nil, err
+		}
+
+		authHashVerifier, err := do.Invoke[service.TelegramAuthHashVerifier](i)
+		if err != nil {
+			return nil, err
+		}
+
+		tokenVerifier, err := do.Invoke[service.TelegramTokenVerifier](i)
+		if err != nil {
+			return nil, err
+		}
+
+		botRepo, err := do.Invoke[repository.BotRepositoryPort](i)
+		if err != nil {
+			return nil, err
+		}
+
+		botUserRepo, err := do.Invoke[repository.BotUserRepositoryPort](i)
+		if err != nil {
+			return nil, err
+		}
+
+		return usecase.NewLoginByWidget(
+			transactor,
+			hydraClient,
+			widgetDataParser,
+			authHashVerifier,
+			tokenVerifier,
+			botRepo,
+			botUserRepo,
+			cfg.Security.Telegram.AuthDataTTLSeconds,
+		)
+	})
 }
