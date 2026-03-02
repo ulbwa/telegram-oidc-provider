@@ -27,6 +27,11 @@ func provideEchoApp(injector do.Injector) {
 			return nil, err
 		}
 
+		loginByWidget, err := do.Invoke[*usecase.LoginByWidget](i)
+		if err != nil {
+			return nil, err
+		}
+
 		resolveLoginChallenge, err := do.Invoke[*usecase.ResolveLoginChallenge](i)
 		if err != nil {
 			return nil, err
@@ -43,7 +48,7 @@ func provideEchoApp(injector do.Injector) {
 			baseUri = uri
 		}
 
-		apiServer, err := apihttp.NewServer(baseUri, syncBot)
+		apiServer, err := apihttp.NewServer(baseUri, syncBot, loginByWidget)
 		if err != nil {
 			return nil, err
 		}
