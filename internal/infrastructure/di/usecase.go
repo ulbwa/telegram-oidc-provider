@@ -109,6 +109,11 @@ func provideUsecases(injector do.Injector) {
 			return nil, err
 		}
 
+		replayGuard, err := do.Invoke[service.TelegramReplayGuard](i)
+		if err != nil {
+			return nil, err
+		}
+
 		botRepo, err := do.Invoke[repository.BotRepositoryPort](i)
 		if err != nil {
 			return nil, err
@@ -125,6 +130,7 @@ func provideUsecases(injector do.Injector) {
 			widgetDataParser,
 			authHashVerifier,
 			tokenVerifier,
+			replayGuard,
 			botRepo,
 			botUserRepo,
 			cfg.Security.Telegram.AuthDataTTLSeconds,

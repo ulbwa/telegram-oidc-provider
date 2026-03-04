@@ -23,6 +23,7 @@ type LoginByWidget struct {
 	widgetDataParser  service.TelegramWidgetDataParser
 	authHashVerifier  service.TelegramAuthHashVerifier
 	tokenVerifier     service.TelegramTokenVerifier
+	replayGuard       service.TelegramReplayGuard
 	botRepo           repository.BotRepositoryPort
 	botUserRepo       repository.BotUserRepositoryPort
 	authDataFreshness time.Duration
@@ -34,6 +35,7 @@ func NewLoginByWidget(
 	widgetDataParser service.TelegramWidgetDataParser,
 	authHashVerifier service.TelegramAuthHashVerifier,
 	tokenVerifier service.TelegramTokenVerifier,
+	replayGuard service.TelegramReplayGuard,
 	botRepo repository.BotRepositoryPort,
 	botUserRepo repository.BotUserRepositoryPort,
 	authDataFreshness time.Duration,
@@ -53,6 +55,9 @@ func NewLoginByWidget(
 	if tokenVerifier == nil {
 		return nil, errors.New("token verifier is nil")
 	}
+	if replayGuard == nil {
+		return nil, errors.New("replay guard is nil")
+	}
 	if botRepo == nil {
 		return nil, errors.New("bot repository is nil")
 	}
@@ -69,6 +74,7 @@ func NewLoginByWidget(
 		widgetDataParser:  widgetDataParser,
 		authHashVerifier:  authHashVerifier,
 		tokenVerifier:     tokenVerifier,
+		replayGuard:       replayGuard,
 		botRepo:           botRepo,
 		botUserRepo:       botUserRepo,
 		authDataFreshness: authDataFreshness,
@@ -158,7 +164,7 @@ func (uc *LoginByWidget) verifyBotToken(ctx context.Context, botToken string) er
 	return nil
 }
 
-func (uc *LoginByWidget) verifyAuthData(authData *service.TelegramAuthData, botToken string) error {
+func (uc *LoginByWidget) verifyAuthData(ctx context.Context, authData *service.TelegramAuthData, botToken string) error {
 	if authData == nil || authData.User == nil {
 		return fmt.Errorf("%w: %w", ErrInvalidInput, NewObjectInvalidErr("telegram_auth_data", "user", nil))
 	}
@@ -168,11 +174,21 @@ func (uc *LoginByWidget) verifyAuthData(authData *service.TelegramAuthData, botT
 	if err := uc.authHashVerifier.Verify(authData.Raw, authData.Hash, botToken); err != nil {
 		return fmt.Errorf("%w: %w", ErrInvalidInput, NewObjectInvalidErr("telegram_auth_data", "hash", nil))
 	}
+	if err := uc.replayGuard.CheckAndMarkUsed(ctx, authData.Hash, uc.authDataFreshness); err != nil {
+		if errors.Is(err, service.ErrReplayDetected) {
+			return fmt.Errorf(
+				"%w: %w",
+				ErrInvalidInput,
+				NewObjectInvalidErr("telegram_auth_data", "hash", utils.Ptr("replay")),
+			)
+		}
+		return NewBadGatewayErr("telegram_replay_guard")
+	}
 
 	return nil
 }
 
-func (uc *LoginByWidget) parseAndVerifyAuthData(authDataParams map[string]any, botToken string) (*service.TelegramAuthData, error) {
+func (uc *LoginByWidget) parseAndVerifyAuthData(ctx context.Context, authDataParams map[string]any, botToken string) (*service.TelegramAuthData, error) {
 	if len(authDataParams) == 0 {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidInput, NewObjectInvalidErr("telegram_auth_data", "payload", nil))
 	}
@@ -182,7 +198,7 @@ func (uc *LoginByWidget) parseAndVerifyAuthData(authDataParams map[string]any, b
 		return nil, fmt.Errorf("%w: %w", ErrInvalidInput, NewObjectInvalidErr("telegram_auth_data", "payload", nil))
 	}
 
-	if err := uc.verifyAuthData(authData, botToken); err != nil {
+	if err := uc.verifyAuthData(ctx, authData, botToken); err != nil {
 		return nil, err
 	}
 
@@ -281,6 +297,10 @@ func (uc *LoginByWidget) mapRejectError(err error) (string, int64, string) {
 
 	var objectInvalidErr *ObjectInvalidErr
 	if errors.As(err, &objectInvalidErr) {
+		if objectInvalidErr.Object == "telegram_auth_data" && objectInvalidErr.Field == "hash" &&
+			objectInvalidErr.Reason != nil && *objectInvalidErr.Reason == "replay" {
+			return "access_denied", http.StatusForbidden, "authentication data has already been used"
+		}
 		if objectInvalidErr.Object == "bot" && objectInvalidErr.Field == "token" {
 			return "unauthorized_client", http.StatusBadRequest, "client is linked to invalid bot credentials"
 		}
@@ -389,7 +409,7 @@ func (uc *LoginByWidget) Execute(ctx context.Context, input *LoginByWidgetInput)
 		return uc.rejectAndBuildOutput(ctx, input.LoginChallenge, err)
 	}
 
-	authData, err := uc.parseAndVerifyAuthData(input.AuthData, bot.Token)
+	authData, err := uc.parseAndVerifyAuthData(ctx, input.AuthData, bot.Token)
 	if err != nil {
 		return uc.rejectAndBuildOutput(ctx, input.LoginChallenge, err)
 	}
